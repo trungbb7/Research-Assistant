@@ -1,0 +1,9 @@
+python-dotenv
+requests
+tzdata
+beautifulsoup4
+langchain
+langchain-google-genai
+langgraph
+ddgs
+langchain_openai
