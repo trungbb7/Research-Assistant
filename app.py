@@ -14,6 +14,8 @@ from zoneinfo import ZoneInfo
 from typing import TypedDict, Annotated
 from dotenv import load_dotenv
 
+from .utils import md_print
+
 load_dotenv()
 deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
 
@@ -156,11 +158,11 @@ def run_agent(query):
                 content = last_msg.content
                 if isinstance(content, list) and content:
                     # print(content[0]['text'])
-                    print(content[0]["text"])
+                    md_print(content[0]["text"])
                 elif not (
                     getattr(last_msg, "tool_calls", None)
                     or getattr(last_msg, "tool_call_id", None)
                 ):
-                    print(content)
+                    md_print(content)
                 else:
                     print(f"Log: {content[:200]}{'...' if len(content) > 200 else ''}")
