@@ -2,6 +2,7 @@ python-dotenv
 requests
 tzdata
 rich
+arxiv
 beautifulsoup4
 langchain
 langchain-google-genai
