@@ -3,10 +3,14 @@ requests
 tzdata
 rich
 arxiv
+ddgs
+pymupdf
 beautifulsoup4
 langchain
+langchain_community
 langchain-google-genai
 langgraph
-ddgs
 langchain_openai
-pymupdf
+langchain-chroma
+langchain-text-splitters
+sentence-transformers
