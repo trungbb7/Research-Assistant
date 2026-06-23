@@ -15,3 +15,9 @@ paper_summaries_db = Chroma(
     collection_name="paper_summaries",
     embedding_function=bgem3_embeddings,
 )
+
+research_memory_db = Chroma(
+    client=client,
+    collection_name="research_memory",
+    embedding_function=bgem3_embeddings,
+)

@@ -57,4 +57,4 @@ def fetch_web_content(urls: list[str]) -> str:
         return "\n---Article seperator----\n".join(results)
 
     except:
-        return f"Đã xảy ra lỗi khi lấy dữ liệu từ url: {url}"
+        return f"Error while fetching data from url: {url}"

@@ -14,7 +14,7 @@ def download_pdf(url: str):
         file_path = save_dir / file_name
 
         if file_path.exists():
-            return str(file_path)
+            return f"Existing file path founded: {str(file_path)}"
 
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -24,4 +24,4 @@ def download_pdf(url: str):
 
         return str(file_path)
     except:
-        return "Đã xảy ra lỗi khi tải file pdf"
+        return "Error while downloading pdf file"
