@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 from typing import TypedDict, Annotated
 from dotenv import load_dotenv
 
-from .utils import md_print
+from .utils.common_utils import md_print
 
 load_dotenv()
 deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")

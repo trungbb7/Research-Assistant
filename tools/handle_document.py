@@ -77,4 +77,6 @@ def retrieve_specific_paper_chunks(
         query=query, k=k, filter={"paper_id": {"$in": paper_ids}}
     )
 
-    return docs
+    sorted_docs = sorted(docs, key=lambda x: x.metadata.get("paper_id", ""))
+
+    return sorted_docs

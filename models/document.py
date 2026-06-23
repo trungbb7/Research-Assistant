@@ -19,6 +19,7 @@ class Document(BaseModel):
 
 
 class ChunkSummary(BaseModel):
+    paper_id: str
     key_points: list[str]
     methods: list[str]
     datasets: list[str]
@@ -26,6 +27,7 @@ class ChunkSummary(BaseModel):
 
 
 class PaperSummary(BaseModel):
+    paper_id: str
     title: str
     problem: str
     methodology: str
@@ -34,3 +36,41 @@ class PaperSummary(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
     conclution: str
+
+
+class Finding(BaseModel):
+    paper_id: str
+    method: str
+    datasets: list[str]
+    results: list[str]
+    strengths: list[str]
+    limitations: list[str]
+
+
+class ComparisionResult(BaseModel):
+    similarities: list[str]
+    differences: list[str]
+    best_methods: list[str]
+    tradeoffs: list[str]
+
+
+class TrendAnalysis(BaseModel):
+    major_trend: list[str]
+    emerging_directions: list[str]
+    common_limitations: list[str]
+    feature_researchs: list[str]
+
+
+class ResearchReport(BaseModel):
+    title: str
+    overview: str
+    comparision: str
+    trends: str
+    key_findings: str
+    conclustion: str
+    references: list[str]
+
+
+class ResearchPlan(BaseModel):
+    topic: str
+    tasks: list[str]
