@@ -1,8 +1,11 @@
 import requests
 from pathlib import Path
+from langchain_core.tools import tool
 
 
+@tool
 def download_pdf(url: str):
+    "Download pdf file from given url"
     try:
         save_dir = Path("../data/papers")
         save_dir.mkdir(parents=True, exist_ok=True)

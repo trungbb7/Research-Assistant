@@ -1,6 +1,8 @@
 import uuid
 from langchain_core.documents import Document as LangchainDocument
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.tools import tool
+from langgraph.types import Command
 from ..models.document import Document
 from ..vectordb.vectordb import paper_chunks_db, paper_summaries_db
 from llm_utils_tools import summary_chunks, summary_paper
@@ -56,17 +58,17 @@ def add_documents(document: Document):
 
 
 def retrieve_paper_chunks(
-    query: str = "", k=5, filter: dict[str, str] = None
+    query: str = "", k=10, filter: dict[str, str] = None
 ) -> list[LangchainDocument]:
     """Retrieve paper chunks"""
     return paper_chunks_db.similarity_search(query, k=k, filter=filter)
 
 
-def retrieve_paper_summaries(
-    query: str = "", k=5, filter: dict[str, str] = None
-) -> list[LangchainDocument]:
-    """Retrieve paper summaries"""
-    return paper_summaries_db.similarity_search(query, k=k, filter=filter)
+@tool
+def retrieve_paper_summaries(query: str = "", k=10, filter: dict[str, str] = None):
+    """Retrieve paper summaries and save to state"""
+    summaries = paper_summaries_db.similarity_search(query, k=k, filter=filter)
+    return Command(update={"paper_summaries": summaries})
 
 
 def retrieve_specific_paper_chunks(

@@ -38,6 +38,10 @@ class PaperSummary(BaseModel):
     conclution: str
 
 
+class PaperSelectionResult(BaseModel):
+    paper_ids: list[str]
+
+
 class Finding(BaseModel):
     paper_id: str
     method: str
@@ -71,6 +75,12 @@ class ResearchReport(BaseModel):
     references: list[str]
 
 
-class ResearchPlan(BaseModel):
+class Plan(BaseModel):
     topic: str
     tasks: list[str]
+    need_research: bool
+    is_normal: bool
+
+
+class CheckInfoResult(BaseModel):
+    enough: bool

@@ -1,10 +1,13 @@
 import arxiv
 from ..models.paper import Paper
+from langchain_core.tools import tool
 
 arxiv_client = arxiv.Client()
 
 
+@tool
 def arxiv_search(query: str, max_results: int = 5, id_list: list[str] = None):
+    """Search papers from arxiv.org"""
     search = arxiv.Search(
         query=query,
         id_list=id_list,
@@ -27,4 +30,4 @@ def arxiv_search(query: str, max_results: int = 5, id_list: list[str] = None):
             )
         )
 
-    return results
+    return "\n".join([paper.model_dump_json() for paper in results])

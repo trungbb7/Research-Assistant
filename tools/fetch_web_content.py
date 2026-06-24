@@ -1,8 +1,10 @@
 import re
 import requests
 from bs4 import BeautifulSoup
+from langchain_core.tools import tool
 
 
+@tool
 def fetch_web_content(urls: list[str]) -> str:
     """Fetch web content for given urls"""
     try:

@@ -1,6 +1,11 @@
 import os
+from typing import Annotated
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from langchain_core.tools import tool
+from langchain_core.documents import Document as LangchainDocument
+from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
 
 from ..models.document import (
     ChunkSummary,
@@ -9,7 +14,9 @@ from ..models.document import (
     ComparisionResult,
     TrendAnalysis,
     ResearchReport,
-    ResearchPlan,
+    Plan,
+    PaperSelectionResult,
+    CheckInfoResult,
 )
 
 load_dotenv()
@@ -23,6 +30,53 @@ llm = ChatOpenAI(
     base_url="https://api.deepseek.com",
     temperature=0.2,
 )
+
+
+@tool
+def generate_plan(
+    query: str,
+):
+    PROMPT = """
+    Generate plan for query
+
+    Identify:
+    - topic
+    - tasks
+    - need research or not
+    - is research or normal query
+
+    Query:
+    {query}
+    """
+
+    structured_llm = llm.with_structured_output(Plan)
+    plan = structured_llm.invoke(PROMPT.format(query=query))
+
+    return plan.model_json_dump()
+
+
+@tool
+def check_info_for_research(state: Annotated[dict, InjectedState]):
+    """Check if agent have enough information (from retrieved paper summaries) to start research"""
+    PROMPT = """
+    Check if agent have enough information (from retrieved paper summaries) to start research about query:
+
+    Query:
+    {query}
+
+    Retrieved paper summaries:
+    {summaries}
+    """
+
+    structured_llm = llm.with_structured_output(CheckInfoResult)
+    summaries_str = "\n\n".join(
+        [summary.model_dump_json() for summary in state["paper_summaries"]]
+    )
+    response = structured_llm.invoke(
+        PROMPT.format(query=state["query"], summaries=summaries_str)
+    )
+
+    return Command(update={"enough_info": response.enough})
 
 
 def summary_chunks(chunks: list[str]):
@@ -60,7 +114,46 @@ def summary_paper(summaried_chunks: list[ChunkSummary]):
     return out
 
 
-def extract_findings(query: str, chunks: list[ChunkSummary]):
+@tool
+def select_papers(state: Annotated[dict, InjectedState]):
+    """Filter paper (from paper summaries) that relative to query"""
+
+    PROMPT = """
+    Select paper ids relative to query:
+
+    Query:
+    {query}
+
+    Paper summaries:
+    {summaries}
+    """
+
+    structured_llm = llm.with_structured_output(PaperSelectionResult)
+    paper_summaries = state["paper_summaries"]
+    query = state["query"]
+    summaries_str = "\n\n".join(
+        [summary.model_dump_json() for summary in paper_summaries]
+    )
+    response = structured_llm.invoke(
+        PROMPT.format(query=query, summaries=summaries_str)
+    )
+
+    paper_ids = response.paper_ids
+
+    reduced_paper_summaries = []
+    for paper_summary in paper_summaries:
+        if paper_summary.metadata.paper_id in paper_ids:
+            reduced_paper_summaries.append(paper_summary)
+
+    return Command(
+        update={
+            "selected_paper_ids": paper_ids,
+            "paper_summaries": reduced_paper_summaries,
+        }
+    )
+
+
+def extract_findings(query: str, chunks: list[LangchainDocument]):
     prompt = """
     You are a research analyst
 
@@ -79,12 +172,26 @@ def extract_findings(query: str, chunks: list[ChunkSummary]):
     """
 
     structured_llm = llm.with_structured_output(Finding)
-    chunks_str = "\n\n".join([chunk.model_dump_json() for chunk in chunks])
-    response = structured_llm.invoke(prompt.format(query=query, chunks=chunks_str))
-    return response
+    findings = []
+    paper_ids = list(set([chunk.metadata.paper_id for chunk in chunks]))
+    paper_chunks_dict = {
+        paper_id: [
+            chunk.page_content
+            for chunk in chunks
+            if chunk.metadata.paper_id == paper_id
+        ]
+        for paper_id in paper_ids
+    }
+    for _, paper_chunks in paper_chunks_dict.items():
+        chunks_str = "\n\n".join([chunk.model_dump_json() for chunk in paper_chunks])
+
+        response = structured_llm.invoke(prompt.format(query=query, chunks=chunks_str))
+        findings.append(response)
+
+    return findings
 
 
-def compare_paper(findings: list[Finding]):
+def compare_papers(findings: list[Finding]):
     PROMPT = """
     Compare the following research findings
 
@@ -104,7 +211,7 @@ def compare_paper(findings: list[Finding]):
     return response
 
 
-def trend_analysis(summaries: list[PaperSummary]):
+def trends_analysis(summaries: list[LangchainDocument]):
     PROMPT = """
     Analyze trends across papers
 
@@ -118,7 +225,7 @@ def trend_analysis(summaries: list[PaperSummary]):
     {summaries}
     """
 
-    structured_llm = llm.with_structured_output(ComparisionResult)
+    structured_llm = llm.with_structured_output(TrendAnalysis)
     summaries_str = "\n\n".join([summary.model_dump_json() for summary in summaries])
     response = structured_llm.invoke(PROMPT.format(summaries=summaries_str))
     return response
@@ -126,10 +233,10 @@ def trend_analysis(summaries: list[PaperSummary]):
 
 def generate_report(
     query: str,
+    summaries: list[LangchainDocument],
+    findings: list[Finding],
     comparison: ComparisionResult,
     trends: TrendAnalysis,
-    findings: list[Finding],
-    summaries: list[PaperSummary],
 ):
     PROMPT = """
     Generate a professional research report
@@ -163,17 +270,4 @@ def generate_report(
             summaries=summaries_str,
         )
     )
-    return response
-
-
-def generate_research_plan(query: str):
-    PROMPT = """
-    Generate research plan for query
-
-    Query:
-    {query}
-    """
-
-    structured_llm = llm.with_structured_output(ResearchPlan)
-    response = structured_llm.invoke(PROMPT.format(query=query))
     return response

@@ -1,8 +1,11 @@
 import fitz
 from ..models.document import DocumentMetaData, Document, PageDocument
+from langchain_core.tools import tool
 
 
+@tool
 def read_pdf(path: str, metadata: DocumentMetaData = None):
+    """Read paper content"""
     doc = fitz.open(path)
 
     pages = []

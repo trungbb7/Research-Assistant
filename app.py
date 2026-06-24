@@ -157,7 +157,6 @@ def run_agent(query):
 
                 content = last_msg.content
                 if isinstance(content, list) and content:
-                    # print(content[0]['text'])
                     md_print(content[0]["text"])
                 elif not (
                     getattr(last_msg, "tool_calls", None)
