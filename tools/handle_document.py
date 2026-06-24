@@ -5,10 +5,11 @@ from langchain_core.tools import tool
 from langgraph.types import Command
 from ..models.document import Document
 from ..vectordb.vectordb import paper_chunks_db, paper_summaries_db
-from llm_utils_tools import summary_chunks, summary_paper
+from .llm_utils_tools import summary_chunks, summary_paper
 from ..utils.document_utils import serilize_paper_summary
 
 
+@tool
 def add_documents(document: Document):
     """Save paper (Chunks and summary) to vectordb"""
     try:

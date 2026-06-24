@@ -8,7 +8,7 @@ from .document import Finding, ComparisionResult, TrendAnalysis, Plan, ResearchR
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     query: str
-    research_plan: Plan
+    plan: Plan
     enough_info: bool
     selected_paper_ids: list[str]
     paper_summaries: list[LangchainDocument]

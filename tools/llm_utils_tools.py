@@ -21,21 +21,33 @@ from ..models.document import (
 
 load_dotenv()
 
+llm = None
 
-deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+flatform = os.getenv("LLM_FLATFORM")
+if flatform == "DEEPSEEK":
+    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
 
-llm = ChatOpenAI(
-    model="deepseek-v4-flash",
-    api_key=deepseek_api_key,
-    base_url="https://api.deepseek.com",
-    temperature=0.2,
-)
+    llm = ChatOpenAI(
+        model="deepseek-v4-flash",
+        api_key=deepseek_api_key,
+        base_url="https://api.deepseek.com",
+        temperature=0.2,
+    )
+elif flatform == "OPENAI":
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
+    llm = ChatOpenAI(
+        model="gpt-5-mini",
+        api_key=openai_api_key,
+        temperature=0.2,
+    )
 
 
 @tool
 def generate_plan(
     query: str,
 ):
+    """Generate plan for query"""
     PROMPT = """
     Generate plan for query
 

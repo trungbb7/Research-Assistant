@@ -15,13 +15,13 @@ from typing import TypedDict, Annotated
 from dotenv import load_dotenv
 
 from .utils.common_utils import md_print
-from tools.search_web_urls import search_website_url
-from tools.fetch_web_content import fetch_web_content
-from tools.get_current_datetime import get_current_datetime
-from tools.arxiv_search import arxiv_search
-from tools.download_pdf import download_pdf
-from tools.read_pdf import read_pdf
-from tools.llm_utils_tools import (
+from .tools.search_web_urls import search_website_url
+from .tools.fetch_web_content import fetch_web_content
+from .tools.get_current_datetime import get_current_datetime
+from .tools.arxiv_search import arxiv_search
+from .tools.download_pdf import download_pdf
+from .tools.read_pdf import read_pdf
+from .tools.llm_utils_tools import (
     generate_plan,
     select_papers,
     check_info_for_research,
@@ -30,32 +30,47 @@ from tools.llm_utils_tools import (
     trends_analysis,
     generate_report,
 )
-from tools.handle_document import retrieve_specific_paper_chunks
-from models.state import AgentState
+from .tools.handle_document import retrieve_specific_paper_chunks, add_documents
+from .models.state import AgentState
 
 load_dotenv()
-deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+llm = None
+
+flatform = os.getenv("LLM_FLATFORM")
+if flatform == "DEEPSEEK":
+    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+
+    llm = ChatOpenAI(
+        model="deepseek-v4-flash",
+        api_key=deepseek_api_key,
+        base_url="https://api.deepseek.com",
+        temperature=0.2,
+    )
+elif flatform == "OPENAI":
+    print("da vao openai")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
+    llm = ChatOpenAI(
+        model="gpt-5-mini",
+        api_key=openai_api_key,
+        temperature=0.2,
+    )
 
 tools = [
-    search_website_url,
-    fetch_web_content,
+    # search_website_url,
+    # fetch_web_content,
     get_current_datetime,
     generate_plan,
     arxiv_search,
     download_pdf,
     read_pdf,
+    add_documents,
     select_papers,
     check_info_for_research,
 ]
 tools_node = ToolNode(tools)
 
 
-llm = ChatOpenAI(
-    model="deepseek-v4-flash",
-    api_key=deepseek_api_key,
-    base_url="https://api.deepseek.com",
-    temperature=0.2,
-)
 llm_with_tools = llm.bind_tools(tools)
 
 
@@ -159,10 +174,13 @@ def run_agent(query):
     inputs = {
         "messages": [
             SystemMessage(
-                content="You are a research assistant, help people research or answer normal queries"
+                content="You are a research assistant, help people research or answer normal queries."
             ),
             HumanMessage(content=query),
-        ]
+        ],
+        "query": query,
+        "enough_info": False,
+        "completed": False,
     }
 
     for output in app.stream(inputs, stream_mode="updates"):
