@@ -30,7 +30,7 @@ class PaperSummary(BaseModel):
     paper_id: str
     title: str
     problem: str
-    methodology: str
+    methodology: list[str]
     datasets: list[str]
     key_contributions: list[str]
     strengths: list[str]

@@ -58,5 +58,6 @@ def fetch_web_content(urls: list[str]) -> str:
 
         return "\n---Article seperator----\n".join(results)
 
-    except:
+    except Exception as e:
+        print(f"Error: {e}")
         return f"Error while fetching data from url: {url}"

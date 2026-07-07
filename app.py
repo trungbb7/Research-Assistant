@@ -1,8 +1,16 @@
 import os
+import sys
+
+if sys.platform.startswith("win"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
 import re
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -15,98 +23,66 @@ from typing import TypedDict, Annotated
 from dotenv import load_dotenv
 
 from .utils.common_utils import md_print
+from .utils.document_utils import serialize_research_report
+from .tools.search_web_urls import search_website_url
+from .tools.fetch_web_content import fetch_web_content
+from .tools.get_current_datetime import get_current_datetime
+from .tools.arxiv_search import arxiv_search
+from .tools.download_pdf import download_pdf
+from .tools.llm_utils_tools import (
+    generate_plan,
+    select_papers,
+    check_info_for_research,
+    extract_findings,
+    compare_papers,
+    trends_analysis,
+    generate_report,
+)
+from .tools.handle_document import (
+    retrieve_specific_paper_chunks,
+    add_documents,
+    retrieve_paper_summaries,
+)
+from .models.state import AgentState
 
 load_dotenv()
-deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+llm = None
 
+flatform = os.getenv("LLM_PLATFORM")
+if flatform == "DEEPSEEK":
+    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
 
-@tool
-def search_website_url(query: str, max_results: int = 3) -> str:
-    """Search website urls for given query"""
-    with DDGS() as ddgs:
-        results = [r["href"] for r in ddgs.text(query, max_results=max_results)]
+    llm = ChatOpenAI(
+        model="deepseek-v4-flash",
+        api_key=deepseek_api_key,
+        base_url="https://api.deepseek.com",
+        temperature=0.2,
+    )
+elif flatform == "OPENAI":
+    print("da vao openai")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
 
-    return results
+    llm = ChatOpenAI(
+        model="gpt-5-mini",
+        api_key=openai_api_key,
+        temperature=0.2,
+    )
 
-
-@tool
-def fetch_web_content(urls: list[str]) -> str:
-    """Fetch web content for given urls"""
-    try:
-        results = []
-
-        for url in urls:
-            response = requests.get(url)
-
-            if response.status_code != 200:
-                results.append(
-                    f"Không thể truy cập trang {url}, http status: {response.status_code}"
-                )
-
-            soup = BeautifulSoup(response.content, "html.parser")
-
-            for element in soup(
-                [
-                    "script",
-                    "style",
-                    "nav",
-                    "footer",
-                    "header",
-                    "aside",
-                    "noscript",
-                    "svg",
-                    "form",
-                ]
-            ):
-                element.decompose()
-
-            elements = soup.find_all(["h1", "h2", "h3", "h4", "p", "td", "div"])
-            valid_text = []
-            for el in elements:
-                text = el.get_text().strip()
-                if not text:
-                    continue
-
-                if el.name == "div":
-                    if len(el.find_all("div")) > 2:
-                        continue
-
-                    if len(text) < 60:
-                        continue
-
-                clean_text = re.sub(r"\s+", " ", text)
-                if not clean_text in valid_text:
-                    valid_text.append(clean_text)
-
-            final_article = "\n".join(valid_text)
-            results.append(f"{url} ->\n{final_article}")
-
-        return "\n---Article seperator----\n".join(results)
-
-    except:
-        return f"Đã xảy ra lỗi khi lấy dữ liệu từ url: {url}"
-
-
-@tool
-def get_current_datetime() -> str:
-    """Get current datetime"""
-    return datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).strftime("%Y-%m-%d %H:%M:%S")
-
-
-tools = [search_website_url, fetch_web_content, get_current_datetime]
+tools = [
+    search_website_url,
+    fetch_web_content,
+    get_current_datetime,
+    generate_plan,
+    arxiv_search,
+    download_pdf,
+    add_documents,
+    select_papers,
+    check_info_for_research,
+    retrieve_paper_summaries,
+]
 tools_node = ToolNode(tools)
 
 
-class AgentState(TypedDict):
-    messages: Annotated[list[BaseMessage], add_messages]
-
-
-llm = ChatOpenAI(
-    model="deepseek-v4-flash",
-    api_key=deepseek_api_key,
-    base_url="https://api.deepseek.com",
-    temperature=0.2,
-)
 llm_with_tools = llm.bind_tools(tools)
 
 
@@ -124,7 +100,65 @@ def route_llm(state: AgentState):
     if last_msg.tool_calls:
         return "tools"
 
+    if state["completed"]:
+        md_print(serialize_research_report(state["report"]))
+        return END
+
+    if state["enough_info"]:
+        return "retrieve_chunks"
+
     return END
+
+
+def retrieve_chunks_node(state: AgentState):
+    paper_ids = state["selected_paper_ids"]
+    query = state["query"]
+
+    chunks = retrieve_specific_paper_chunks(query=query, paper_ids=paper_ids)
+    return {"chunks": chunks}
+
+
+def extract_findings_node(state: AgentState):
+    query = state["query"]
+    chunks = state["chunks"]
+
+    findings = extract_findings(query=query, chunks=chunks)
+
+    return {"findings": findings}
+
+
+def compare_papers_node(state: AgentState):
+    findings = state["findings"]
+
+    comparison_result = compare_papers(findings=findings)
+
+    return {"comparison": comparison_result}
+
+
+def trends_analysis_node(state: AgentState):
+    paper_summaries = state["paper_summaries"]
+
+    trends = trends_analysis(summaries=paper_summaries)
+
+    return {"trends": trends}
+
+
+def generate_report_node(state: AgentState):
+    query = state["query"]
+    summaries = state["paper_summaries"]
+    findings = state["findings"]
+    comparison = state["comparison"]
+    trends = state["trends"]
+
+    report = generate_report(
+        query=query,
+        summaries=summaries,
+        findings=findings,
+        comparison=comparison,
+        trends=trends,
+    )
+
+    return {"report": report, "completed": True}
 
 
 def run_agent(query):
@@ -132,14 +166,54 @@ def run_agent(query):
 
     workflow.add_node("llm", llm_node)
     workflow.add_node("tools", tools_node)
+    workflow.add_node("retrieve_chunks", retrieve_chunks_node)
+    workflow.add_node("extract_findings", extract_findings_node)
+    workflow.add_node("compare_papers", compare_papers_node)
+    workflow.add_node("trends_analysis", trends_analysis_node)
+    workflow.add_node("generate_report", generate_report_node)
 
     workflow.add_edge(START, "llm")
     workflow.add_conditional_edges("llm", route_llm)
     workflow.add_edge("tools", "llm")
+    workflow.add_edge("retrieve_chunks", "extract_findings")
+    workflow.add_edge("extract_findings", "compare_papers")
+    workflow.add_edge("compare_papers", "trends_analysis")
+    workflow.add_edge("trends_analysis", "generate_report")
+    workflow.add_edge("generate_report", "llm")
 
     app = workflow.compile()
 
-    inputs = {"messages": [HumanMessage(content=query)]}
+    inputs = {
+        "messages": [
+            SystemMessage(
+                content="""You are a research assistant. You help users research or answer normal queries.
+                 For most tasks, get the current date time first.
+                 
+                 === CRITICAL INSTRUCTIONS FOR RESEARCH TASKS ===
+                 If a task requires research, you must follow the strict step-by-step pipeline. Your primary goal is to gather and ingest the research papers, and then verify if we have enough information.
+                 
+                 WARNING: You MUST NOT write or generate the final report or summary yourself. The system has specialized downstream nodes that will automatically extract findings, compare papers, analyze trends, and compile the final report. Your role is solely to fetch, download, ingest, select, and check the information.
+                 
+                 Flow for Research Tasks:
+                 1. Call `generate_plan` to structure the research tasks.
+                 2. Search the internet using `search_website_url` to find the latest updates, models, and paper names.
+                 3. Use `arxiv_search` to find relevant scientific papers on arXiv.
+                 4. For each relevant paper you want to study, you MUST download its PDF file by calling `download_pdf(url)`.
+                    - DO NOT call `fetch_web_content` on PDF files, academic paper URLs, or arXiv PDFs. Only use `download_pdf`.
+                 5. For each successfully downloaded PDF file, you MUST ingest it into the database by calling `add_documents(pdf_path, metadata)`.
+                    - If pdf files exist, don't ingest them (they have been ingested before)
+                 6. After adding documents, you MUST call `select_papers()` to select the relevant papers and populate `selected_paper_ids` in the system state.
+                 7. Finally, call `check_info_for_research()` to check if the gathered paper summaries are enough to answer the research query.
+                 8. If `check_info_for_research` indicates that the information is NOT enough (enough=False), go back to search for more papers.
+                 9. If `check_info_for_research` indicates that the information IS enough (enough=True), you MUST IMMEDIATELY stop calling tools and respond with a simple text message like "I have gathered enough research papers and successfully ingested them. Starting the research extraction and analysis..." without writing the report yourself.
+                 """
+            ),
+            HumanMessage(content=query),
+        ],
+        "query": query,
+        "enough_info": False,
+        "completed": False,
+    }
 
     for output in app.stream(inputs, stream_mode="updates"):
         for node_name, updated_state in output.items():

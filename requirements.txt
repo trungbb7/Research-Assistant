@@ -13,4 +13,5 @@ langgraph
 langchain_openai
 langchain-chroma
 langchain-text-splitters
+langchain-huggingface
 sentence-transformers

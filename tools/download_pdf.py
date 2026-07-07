@@ -1,13 +1,14 @@
 import requests
 from pathlib import Path
 from langchain_core.tools import tool
+from ..config import basePath
 
 
 @tool
 def download_pdf(url: str):
     "Download pdf file from given url"
     try:
-        save_dir = Path("../data/papers")
+        save_dir = basePath / "data" / "papers"
         save_dir.mkdir(parents=True, exist_ok=True)
 
         file_name = url.split("/")[-1]
@@ -26,5 +27,6 @@ def download_pdf(url: str):
             f.write(response.content)
 
         return str(file_path)
-    except:
+    except Exception as e:
+        print(f"Error: {e}")
         return "Error while downloading pdf file"
