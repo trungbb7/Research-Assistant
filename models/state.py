@@ -17,4 +17,5 @@ class AgentState(TypedDict):
     comparison: ComparisionResult
     trends: TrendAnalysis
     report: ResearchReport
+    final_report: str
     completed: bool

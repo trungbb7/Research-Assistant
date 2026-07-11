@@ -7,19 +7,11 @@ if sys.platform.startswith("win"):
         sys.stderr.reconfigure(encoding="utf-8")
     except AttributeError:
         pass
-import re
-from langchain_core.tools import tool
+
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-import requests
-from bs4 import BeautifulSoup
-from ddgs import DDGS
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from typing import TypedDict, Annotated
 from dotenv import load_dotenv
 
 from .utils.common_utils import md_print
@@ -29,6 +21,7 @@ from .tools.fetch_web_content import fetch_web_content
 from .tools.get_current_datetime import get_current_datetime
 from .tools.arxiv_search import arxiv_search
 from .tools.download_pdf import download_pdf
+from .tools.save_report import save_report
 from .tools.llm_utils_tools import (
     generate_plan,
     select_papers,
@@ -37,6 +30,7 @@ from .tools.llm_utils_tools import (
     compare_papers,
     trends_analysis,
     generate_report,
+    write_final_report,
 )
 from .tools.handle_document import (
     retrieve_specific_paper_chunks,
@@ -46,27 +40,15 @@ from .tools.handle_document import (
 from .models.state import AgentState
 
 load_dotenv()
-llm = None
 
-flatform = os.getenv("LLM_PLATFORM")
-if flatform == "DEEPSEEK":
-    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
 
-    llm = ChatOpenAI(
-        model="deepseek-v4-flash",
-        api_key=deepseek_api_key,
-        base_url="https://api.deepseek.com",
-        temperature=0.2,
-    )
-elif flatform == "OPENAI":
-    print("da vao openai")
-    openai_api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
-    llm = ChatOpenAI(
-        model="gpt-5-mini",
-        api_key=openai_api_key,
-        temperature=0.2,
-    )
+llm = ChatOpenAI(
+    model="gpt-5-mini",
+    api_key=openai_api_key,
+    temperature=0.2,
+)
 
 tools = [
     search_website_url,
@@ -161,6 +143,18 @@ def generate_report_node(state: AgentState):
     return {"report": report, "completed": True}
 
 
+def write_final_report_node(state: AgentState):
+    research_report = state["report"]
+    final_report = write_final_report(research_report)
+    return {"final_report": final_report}
+
+
+def finalize_node(state: AgentState):
+    final_report = state["final_report"]
+    save_report(final_report)
+    md_print(final_report)
+
+
 def run_agent(query):
     workflow = StateGraph(AgentState)
 
@@ -171,6 +165,8 @@ def run_agent(query):
     workflow.add_node("compare_papers", compare_papers_node)
     workflow.add_node("trends_analysis", trends_analysis_node)
     workflow.add_node("generate_report", generate_report_node)
+    workflow.add_node("write_final_report", write_final_report_node)
+    workflow.add_node("finalize", finalize_node)
 
     workflow.add_edge(START, "llm")
     workflow.add_conditional_edges("llm", route_llm)
@@ -179,7 +175,9 @@ def run_agent(query):
     workflow.add_edge("extract_findings", "compare_papers")
     workflow.add_edge("compare_papers", "trends_analysis")
     workflow.add_edge("trends_analysis", "generate_report")
-    workflow.add_edge("generate_report", "llm")
+    workflow.add_edge("generate_report", "write_final_report")
+    workflow.add_edge("write_final_report", "finalize")
+    workflow.add_edge("finalize", END)
 
     app = workflow.compile()
 
@@ -189,7 +187,7 @@ def run_agent(query):
                 content="""You are a research assistant. You help users research or answer normal queries.
                  For most tasks, get the current date time first.
                  
-                 === CRITICAL INSTRUCTIONS FOR RESEARCH TASKS ===
+                 CRITICAL INSTRUCTIONS FOR RESEARCH TASKS:
                  If a task requires research, you must follow the strict step-by-step pipeline. Your primary goal is to gather and ingest the research papers, and then verify if we have enough information.
                  
                  WARNING: You MUST NOT write or generate the final report or summary yourself. The system has specialized downstream nodes that will automatically extract findings, compare papers, analyze trends, and compile the final report. Your role is solely to fetch, download, ingest, select, and check the information.
@@ -218,6 +216,9 @@ def run_agent(query):
     for output in app.stream(inputs, stream_mode="updates"):
         for node_name, updated_state in output.items():
             print(f"Node: {node_name}")
+
+            if updated_state is None:
+                continue
 
             if "messages" in updated_state and updated_state["messages"]:
                 last_msg = updated_state["messages"][-1]

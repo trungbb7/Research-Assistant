@@ -1,16 +1,10 @@
-import os
 import sys
 import torch
 from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from ..config import basePath
 
-# Allow forcing device via env variable
-env_device = os.getenv("EMBEDDING_DEVICE")
-if env_device:
-    device = torch.device(env_device)
-else:
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model_name = "BAAI/bge-m3"
 model_kwargs = {"device": str(device)}
@@ -27,7 +21,10 @@ try:
     )
 except Exception as e:
     if "cuda" in str(device):
-        print("CUDA initialization failed (possibly OOM). Falling back to CPU for embeddings.", file=sys.stderr)
+        print(
+            "CUDA initialization failed (possibly OOM). Falling back to CPU for embeddings.",
+            file=sys.stderr,
+        )
         model_kwargs["device"] = "cpu"
         bgem3_embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
@@ -37,4 +34,3 @@ except Exception as e:
         )
     else:
         raise e
-

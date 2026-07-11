@@ -8,6 +8,7 @@ from langchain_core.documents import Document as LangchainDocument
 from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
+
 from ..models.document import (
     ChunkSummary,
     PaperSummary,
@@ -165,7 +166,6 @@ def select_papers(
 
     reduced_paper_summaries = []
     for paper_summary in paper_summaries:
-        print(f"Metadata: {paper_summary.metadata}")
         if paper_summary.metadata.get("paper_id") in paper_ids:
             reduced_paper_summaries.append(paper_summary)
 
@@ -238,6 +238,7 @@ def compare_papers(findings: list[Finding]):
     structured_llm = reasoning_llm.with_structured_output(ComparisionResult)
     findings_str = "\n\n".join([finding.model_dump_json() for finding in findings])
     response = structured_llm.invoke(PROMPT.format(findings=findings_str))
+
     return response
 
 
@@ -301,3 +302,17 @@ def generate_report(
         )
     )
     return response
+
+
+def write_final_report(report: ResearchReport):
+    str_report = report.model_dump_json()
+
+    PROMPT = """
+    Generate final report from research report as markdown format
+
+    Report:
+    {report}
+    """
+
+    response = reasoning_llm.invoke(PROMPT.format(report=report))
+    return response.content
