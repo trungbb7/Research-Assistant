@@ -6,6 +6,7 @@ class DocumentMetaData(BaseModel):
     authors: list[str]
     published: str
     categories: list[str]
+    entry_id: str
 
 
 class PageDocument(BaseModel):

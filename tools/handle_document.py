@@ -35,7 +35,7 @@ def add_documents(
         search_filter = models.Filter(
             must=[
                 models.FieldCondition(
-                    key="metadata.title", match=models.MatchValue(metadata.title)
+                    key="metadata.title", match=models.MatchValue(value=metadata.title)
                 )
             ]
         )
@@ -174,7 +174,7 @@ def retrieve_specific_paper_chunks(
     search_filter = models.Filter(
         must=[
             models.FieldCondition(
-                key="metadata.paper_id", match=models.MatchAny(paper_ids)
+                key="metadata.paper_id", match=models.MatchAny(any=paper_ids)
             )
         ]
     )

@@ -6,10 +6,34 @@ from qdrant_client import QdrantClient
 # from ..embeddings.bgem3 import bgem3_embeddings
 from ..embeddings.embedding import dense_embeddings, spare_embeddings
 
-db = QdrantVectorStore()
+from qdrant_client.models import (
+    Distance,
+    VectorParams,
+    SparseVectorParams,
+)
 
 # client = chromadb.PersistentClient("chroma_db")
-client = QdrantClient("qdrant_storage")
+client = QdrantClient(url="http://localhost:6333")
+
+
+def ensure_collection(name: str):
+    collections = {c.name for c in client.get_collections().collections}
+
+    if name in collections:
+        return
+
+    client.create_collection(
+        collection_name=name,
+        vectors_config=VectorParams(
+            size=len(dense_embeddings.embed_query("test")),
+            distance=Distance.COSINE,
+        ),
+        sparse_vectors_config={"langchain-sparse": SparseVectorParams()},
+    )
+
+
+ensure_collection("paper_chunks")
+ensure_collection("paper_summaries")
 
 paper_chunks_vectorstore = QdrantVectorStore(
     client=client,
