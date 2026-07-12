@@ -6,9 +6,15 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.tools import tool, InjectedToolCallId
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
+from qdrant_client import models
 from langgraph.prebuilt import InjectedState
 from ..models.document import DocumentMetaData, Document, PageDocument
-from ..vectordb.vectordb import paper_chunks_db, paper_summaries_db
+from ..vectordb.vectordb import (
+    paper_chunks_retriever,
+    paper_summaries_retriever,
+    paper_chunks_vectorstore,
+    paper_summaries_vectorstore,
+)
 from .llm_utils_tools import summary_chunks, summary_paper
 from ..utils.document_utils import serilize_paper_summary
 
@@ -26,8 +32,16 @@ def add_documents(
     try:
 
         # Check if the paper exists in vectordb
-        existing = paper_summaries_db.similarity_search(
-            query=metadata.title, filter={"title": metadata.title}, k=1
+        search_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.title", match=models.MatchValue(metadata.title)
+                )
+            ]
+        )
+        existing = paper_summaries_retriever.invoke(
+            input=metadata.title,
+            config={"search_kwargs": {"filter": search_filter, "k": 1}},
         )
         if existing:
             current_summaries = state.get("paper_summaries", []) or []
@@ -83,7 +97,7 @@ def add_documents(
         paper_summary_content = serilize_paper_summary(paper_summary)
 
         # Save paper chunks
-        paper_chunks_db.add_documents(docs)
+        paper_chunks_vectorstore.add_documents(docs)
 
         # Save paper summary
         new_summary_doc = LangchainDocument(
@@ -94,7 +108,7 @@ def add_documents(
                 **document.metadata.model_dump(),
             },
         )
-        paper_summaries_db.add_documents([new_summary_doc])
+        paper_summaries_vectorstore.add_documents([new_summary_doc])
 
         # Get existing summaries and append new one
         current_summaries = state.get("paper_summaries", []) or []
@@ -116,23 +130,24 @@ def add_documents(
         return f"Error while inserting data into vectordb: {str(e)}"
 
 
-def retrieve_paper_chunks(
-    query: str = "", k=10, filter: dict[str, str] = None
-) -> list[LangchainDocument]:
+def retrieve_paper_chunks(query: str = "", k=10) -> list[LangchainDocument]:
     """Retrieve paper chunks"""
-    return paper_chunks_db.similarity_search(query, k=k, filter=filter)
+    return paper_chunks_retriever.invoke(
+        input=query, config={"search_kwargs": {"k": k}}
+    )
 
 
 @tool
 def retrieve_paper_summaries(
     query: str = "",
     k=10,
-    filter: dict[str, str] = None,
     state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ):
     """Retrieve paper summaries and save to state"""
-    summaries = paper_summaries_db.similarity_search(query, k=k, filter=filter)
+    summaries = paper_summaries_retriever.invoke(
+        input=query, config={"search_kwargs": {"k": k}}
+    )
 
     # Get existing summaries and append new summaries
     current_summaries = state.get("paper_summaries", []) or []
@@ -155,8 +170,17 @@ def retrieve_specific_paper_chunks(
     query: str = "", k=10, paper_ids: list[str] = []
 ) -> list[LangchainDocument]:
     """Retrieve by specific paper chunks"""
-    docs = paper_chunks_db.similarity_search(
-        query=query, k=k, filter={"paper_id": {"$in": paper_ids}}
+
+    search_filter = models.Filter(
+        must=[
+            models.FieldCondition(
+                key="metadata.paper_id", match=models.MatchAny(paper_ids)
+            )
+        ]
+    )
+
+    docs = paper_chunks_retriever.invoke(
+        input=query, config={"search_kwargs": {"k": k, "filter": search_filter}}
     )
 
     sorted_docs = sorted(docs, key=lambda x: x.metadata.get("paper_id", ""))

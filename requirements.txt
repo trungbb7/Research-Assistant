@@ -14,4 +14,6 @@ langchain_openai
 langchain-chroma
 langchain-text-splitters
 langchain-huggingface
+langchain_qdrant
+fastembed
 sentence-transformers

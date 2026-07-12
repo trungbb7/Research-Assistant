@@ -1,25 +1,39 @@
-import chromadb
-from langchain_chroma import Chroma
+# import chromadb
+# from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore, RetrievalMode
+from qdrant_client import QdrantClient
 
 # from ..embeddings.bgem3 import bgem3_embeddings
-from ..embeddings.openai_embedding import openai_embedding
+from ..embeddings.embedding import dense_embeddings, spare_embeddings
 
-client = chromadb.PersistentClient("chroma_db")
+db = QdrantVectorStore()
 
-paper_chunks_db = Chroma(
+# client = chromadb.PersistentClient("chroma_db")
+client = QdrantClient("qdrant_storage")
+
+paper_chunks_vectorstore = QdrantVectorStore(
     client=client,
     collection_name="paper_chunks",
-    embedding_function=openai_embedding,
+    embedding=dense_embeddings,
+    sparse_embedding=spare_embeddings,
+    retrieval_mode=RetrievalMode.HYBRID,
 )
 
-paper_summaries_db = Chroma(
+paper_summaries_vectorstore = QdrantVectorStore(
     client=client,
     collection_name="paper_summaries",
-    embedding_function=openai_embedding,
+    embedding=dense_embeddings,
+    sparse_embedding=spare_embeddings,
+    retrieval_mode=RetrievalMode.HYBRID,
 )
 
-research_memory_db = Chroma(
-    client=client,
-    collection_name="research_memory",
-    embedding_function=openai_embedding,
-)
+paper_chunks_retriever = paper_chunks_vectorstore.as_retriever()
+paper_summaries_retriever = paper_summaries_vectorstore.as_retriever()
+
+# research_memory_db = QdrantVectorStore(
+#     client=client,
+#     collection_name="research_memory",
+#     embedding=dense_embeddings,
+#     sparse_embedding=spare_embeddings,
+#     retrieval_mode=RetrievalMode.HYBRID
+# )
