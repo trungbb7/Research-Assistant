@@ -39,12 +39,11 @@ def add_documents(
                 )
             ]
         )
-        existing = paper_summaries_retriever.invoke(
-            input=metadata.title,
-            config={"search_kwargs": {"filter": search_filter, "k": 1}},
+        existing = paper_summaries_vectorstore.similarity_search(
+            query=metadata.title, filter=search_filter, k=1
         )
         if existing:
-            current_summaries = state.get("paper_summaries", []) or []
+            current_summaries = state.get("paper_summaries", [])
             new_summaries = list(current_summaries) + existing
 
             return Command(
@@ -132,9 +131,7 @@ def add_documents(
 
 def retrieve_paper_chunks(query: str = "", k=10) -> list[LangchainDocument]:
     """Retrieve paper chunks"""
-    return paper_chunks_retriever.invoke(
-        input=query, config={"search_kwargs": {"k": k}}
-    )
+    return paper_chunks_vectorstore.similarity_search(query=query, k=k)
 
 
 @tool
@@ -145,9 +142,7 @@ def retrieve_paper_summaries(
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ):
     """Retrieve paper summaries and save to state"""
-    summaries = paper_summaries_retriever.invoke(
-        input=query, config={"search_kwargs": {"k": k}}
-    )
+    summaries = paper_summaries_vectorstore.similarity_search(query=query, k=k)
 
     # Get existing summaries and append new summaries
     current_summaries = state.get("paper_summaries", []) or []
@@ -179,8 +174,8 @@ def retrieve_specific_paper_chunks(
         ]
     )
 
-    docs = paper_chunks_retriever.invoke(
-        input=query, config={"search_kwargs": {"k": k, "filter": search_filter}}
+    docs = paper_chunks_vectorstore.similarity_search(
+        query=query, filter=search_filter, k=k
     )
 
     sorted_docs = sorted(docs, key=lambda x: x.metadata.get("paper_id", ""))

@@ -27,13 +27,13 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 summary_llm = ChatOpenAI(
-    model="gpt-4.1-nano",
+    model="gpt-5-nano",
     api_key=openai_api_key,
     temperature=0.2,
 )
 
 reasoning_llm = ChatOpenAI(
-    model="gpt-5-nano",
+    model="gpt-5-mini",
     api_key=openai_api_key,
     temperature=0.2,
 )
@@ -140,10 +140,11 @@ def select_papers(
     state: Annotated[dict, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Filter paper (from paper summaries) that relative to query"""
+    """Filter papers (from paper summaries) that relative to query"""
 
     PROMPT = """
-    Select paper ids relative to query:
+    Select list paper ids of papers from paper summaries relative to query:
+    Note: Should use multiple papers to compare, extract information, methodology,...
 
     Query:
     {query}

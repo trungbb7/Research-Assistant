@@ -1,5 +1,4 @@
 from .app import run_agent
-from .test import test
 
 if __name__ == "__main__":
     # query = "Trận đấu tiếp theo của đội tuyển Bồ Đào Nha tại Worldcup là trận nào?"
