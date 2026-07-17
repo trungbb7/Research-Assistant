@@ -20,7 +20,7 @@ class Document(BaseModel):
 
 
 class ChunkSummary(BaseModel):
-    paper_id: str
+    paper_id: str = ""
     key_points: list[str]
     methods: list[str]
     datasets: list[str]
@@ -28,7 +28,7 @@ class ChunkSummary(BaseModel):
 
 
 class PaperSummary(BaseModel):
-    paper_id: str
+    paper_id: str = ""
     title: str
     problem: str
     methodology: list[str]
@@ -44,8 +44,8 @@ class PaperSelectionResult(BaseModel):
 
 
 class Finding(BaseModel):
-    paper_id: str
-    method: str
+    paper_id: str = ""
+    method: list[str]
     datasets: list[str]
     results: list[str]
     strengths: list[str]

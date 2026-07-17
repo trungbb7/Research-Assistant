@@ -1,3 +1,4 @@
+import operator
 from typing import TypedDict, Annotated
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
@@ -11,7 +12,8 @@ class AgentState(TypedDict):
     plan: Plan
     enough_info: bool
     selected_paper_ids: list[str]
-    paper_summaries: list[LangchainDocument]
+    paper_summaries: Annotated[list[LangchainDocument], operator.add]
+    selected_paper_summaries: list[LangchainDocument]
     chunks: list[LangchainDocument]
     findings: list[Finding]
     comparison: ComparisionResult

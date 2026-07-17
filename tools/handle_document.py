@@ -43,12 +43,10 @@ def add_documents(
             query=metadata.title, filter=search_filter, k=1
         )
         if existing:
-            current_summaries = state.get("paper_summaries", [])
-            new_summaries = list(current_summaries) + existing
 
             return Command(
                 update={
-                    "paper_summaries": new_summaries,
+                    "paper_summaries": existing,
                     "messages": [
                         ToolMessage(
                             content="Paper found in vectordb, use the existing one",
@@ -91,8 +89,23 @@ def add_documents(
         docs = text_splitter.split_documents(lc_docs)
 
         # Summary paper
-        summaried_chunks = summary_chunks([d.page_content for d in docs])
-        paper_summary = summary_paper(summaried_chunks)
+        summaried_chunks = summary_chunks(
+            [d.page_content for d in docs], paper_id=paper_id
+        )
+
+        if not summaried_chunks:
+            return Command(
+                update={
+                    "messages": [
+                        ToolMessage(
+                            content="Error while add documents",
+                            tool_call_id=tool_call_id,
+                        )
+                    ],
+                }
+            )
+
+        paper_summary = summary_paper(summaried_chunks, paper_id=paper_id)
         paper_summary_content = serilize_paper_summary(paper_summary)
 
         # Save paper chunks
@@ -109,13 +122,9 @@ def add_documents(
         )
         paper_summaries_vectorstore.add_documents([new_summary_doc])
 
-        # Get existing summaries and append new one
-        current_summaries = state.get("paper_summaries", []) or []
-        new_summaries = list(current_summaries) + [new_summary_doc]
-
         return Command(
             update={
-                "paper_summaries": new_summaries,
+                "paper_summaries": [new_summary_doc],
                 "messages": [
                     ToolMessage(
                         content="Insert data into vectordb successfully",
@@ -144,13 +153,9 @@ def retrieve_paper_summaries(
     """Retrieve paper summaries and save to state"""
     summaries = paper_summaries_vectorstore.similarity_search(query=query, k=k)
 
-    # Get existing summaries and append new summaries
-    current_summaries = state.get("paper_summaries", []) or []
-    new_summaries = list(current_summaries) + summaries
-
     return Command(
         update={
-            "paper_summaries": new_summaries,
+            "paper_summaries": summaries,
             "messages": [
                 ToolMessage(
                     content=f"Successfully retrieved {len(summaries)} paper summaries from database.",

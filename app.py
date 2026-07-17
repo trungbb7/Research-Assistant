@@ -42,11 +42,19 @@ from .models.state import AgentState
 load_dotenv()
 
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
+deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+
+# llm = ChatOpenAI(
+#     model="gpt-5-mini",
+#     api_key=openai_api_key,
+#     temperature=0.2,
+# )
 
 llm = ChatOpenAI(
-    model="gpt-5-mini",
-    api_key=openai_api_key,
+    model="deepseek-v4-flash",
+    api_key=deepseek_api_key,
+    base_url="https://api.deepseek.com",
     temperature=0.2,
 )
 
@@ -118,7 +126,7 @@ def compare_papers_node(state: AgentState):
 
 
 def trends_analysis_node(state: AgentState):
-    paper_summaries = state["paper_summaries"]
+    paper_summaries = state["selected_paper_summaries"]
 
     trends = trends_analysis(summaries=paper_summaries)
 
@@ -127,7 +135,7 @@ def trends_analysis_node(state: AgentState):
 
 def generate_report_node(state: AgentState):
     query = state["query"]
-    summaries = state["paper_summaries"]
+    summaries = state["selected_paper_summaries"]
     findings = state["findings"]
     comparison = state["comparison"]
     trends = state["trends"]
