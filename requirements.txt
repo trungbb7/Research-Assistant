@@ -17,3 +17,5 @@ langchain-huggingface
 langchain_qdrant
 fastembed
 sentence-transformers
+flask
+flask-cors

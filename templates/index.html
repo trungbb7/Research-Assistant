@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Assistant | Flask Web App</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <i data-lucide="brain-circuit" class="logo-icon"></i>
+                <div class="logo-text">
+                    <h1>AI Research Assistant</h1>
+                    <span>LangGraph + Flask AI Engine</span>
+                </div>
+            </div>
+            <div class="system-status">
+                <div class="status-indicator online"></div>
+                <span>Hệ thống: Sẵn sàng</span>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="workspace-layout">
+            <!-- Left Side: Control & Pipeline Progress -->
+            <aside class="control-panel">
+                <!-- Card 1: Input -->
+                <div class="glass-card query-card">
+                    <div class="card-header">
+                        <i data-lucide="search" class="header-icon text-teal"></i>
+                        <h2>Yêu cầu nghiên cứu</h2>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="query-input" placeholder="Nhập chủ đề bạn muốn nghiên cứu sâu (Ví dụ: Xu hướng kiến trúc LLM mới nhất...)" rows="4"></textarea>
+                        
+                        <div class="suggestions">
+                            <span class="suggestion-tag" onclick="useSuggestion(this)">Xu hướng kiến trúc LLM hiện nay là gì?</span>
+                            <span class="suggestion-tag" onclick="useSuggestion(this)">Các kỹ thuật distillation trong ML/DL nổi bật</span>
+                            <span class="suggestion-tag" onclick="useSuggestion(this)">Phương pháp đánh giá cho tác vụ NLP mới nhất</span>
+                        </div>
+
+                        <button id="run-btn" class="gradient-btn" onclick="startResearch()">
+                            <i data-lucide="play" class="btn-icon"></i>
+                            <span id="btn-text">Bắt đầu nghiên cứu</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 2: Visual Pipeline Graph -->
+                <div class="glass-card pipeline-card">
+                    <div class="card-header">
+                        <i data-lucide="git-branch" class="header-icon text-purple"></i>
+                        <h2>Quy trình xử lý (Pipeline)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="pipeline-graph">
+                            <div class="pipeline-node" id="node-start">
+                                <div class="node-bullet"><i data-lucide="play-circle"></i></div>
+                                <div class="node-label">Khởi tạo & Lập kế hoạch</div>
+                            </div>
+                            <div class="pipeline-line"></div>
+                            
+                            <div class="pipeline-node" id="node-search">
+                                <div class="node-bullet"><i data-lucide="globe"></i></div>
+                                <div class="node-label">Tìm kiếm (Web & arXiv)</div>
+                            </div>
+                            <div class="pipeline-line"></div>
+
+                            <div class="pipeline-node" id="node-ingest">
+                                <div class="node-bullet"><i data-lucide="download-cloud"></i></div>
+                                <div class="node-label">Tải PDF & Ingest VectorDB</div>
+                            </div>
+                            <div class="pipeline-line"></div>
+
+                            <div class="pipeline-node" id="node-select">
+                                <div class="node-bullet"><i data-lucide="check-square"></i></div>
+                                <div class="node-label">Chọn lọc tài liệu phù hợp</div>
+                            </div>
+                            <div class="pipeline-line"></div>
+
+                            <div class="pipeline-node" id="node-analyze">
+                                <div class="node-bullet"><i data-lucide="microscope"></i></div>
+                                <div class="node-label">Trích xuất & So sánh sâu</div>
+                            </div>
+                            <div class="pipeline-line"></div>
+
+                            <div class="pipeline-node" id="node-report">
+                                <div class="node-bullet"><i data-lucide="file-text"></i></div>
+                                <div class="node-label">Biên soạn báo cáo khoa học</div>
+                            </div>
+                            <div class="pipeline-line"></div>
+
+                            <div class="pipeline-node" id="node-finish">
+                                <div class="node-bullet"><i data-lucide="award"></i></div>
+                                <div class="node-label">Hoàn thành & Lưu trữ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Side: Outputs, Reports and Terminal -->
+            <main class="output-panel">
+                <!-- Navigation Tabs -->
+                <div class="output-tabs">
+                    <button class="tab-btn active" onclick="switchTab(event, 'tab-report')">
+                        <i data-lucide="book-open"></i> Báo cáo nghiên cứu
+                    </button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tab-state')">
+                        <i data-lucide="layers"></i> Trạng thái phân tích
+                    </button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tab-papers')">
+                        <i data-lucide="file-text"></i> Tài liệu đã chọn
+                    </button>
+                    <button class="tab-btn" onclick="switchTab(event, 'tab-logs')">
+                        <i data-lucide="terminal"></i> Live Terminal Logs
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="tab-contents">
+                    <!-- Tab 1: Report Viewer -->
+                    <div id="tab-report" class="tab-content active">
+                        <div class="glass-inner-card report-container">
+                            <div class="viewer-actions">
+                                <button class="action-btn" onclick="copyReport()">
+                                    <i data-lucide="copy"></i> Copy Markdown
+                                </button>
+                                <button class="action-btn" onclick="downloadReport()">
+                                    <i data-lucide="download"></i> Tải báo cáo (.md)
+                                </button>
+                            </div>
+                            <div id="report-view" class="markdown-body">
+                                <div class="empty-state">
+                                    <i data-lucide="file-search" class="large-empty-icon"></i>
+                                    <h3>Chưa có báo cáo nào</h3>
+                                    <p>Nhập chủ đề nghiên cứu bên trái và nhấn <b>Bắt đầu nghiên cứu</b> để tạo báo cáo chi tiết.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Analysis Details -->
+                    <div id="tab-state" class="tab-content">
+                        <div class="glass-inner-card">
+                            <div class="state-blocks">
+                                <!-- Plan Block -->
+                                <div class="state-section card-gradient-purple">
+                                    <h3><i data-lucide="compass"></i> Kế hoạch nghiên cứu</h3>
+                                    <div id="state-plan-content" class="state-data">Chưa có kế hoạch nào được tạo.</div>
+                                </div>
+
+                                <!-- Findings Block -->
+                                <div class="state-section card-gradient-teal">
+                                    <h3><i data-lucide="list-collapse"></i> Kết quả phân tích (Findings)</h3>
+                                    <div id="state-findings-content" class="state-data">Chưa có kết quả trích xuất.</div>
+                                </div>
+
+                                <!-- Comparisons Block -->
+                                <div class="state-section card-gradient-blue">
+                                    <h3><i data-lucide="git-compare"></i> So sánh & Đối chiếu (Comparisons)</h3>
+                                    <div id="state-comparison-content" class="state-data">Chưa có bảng so sánh.</div>
+                                </div>
+
+                                <!-- Trends Block -->
+                                <div class="state-section card-gradient-emerald">
+                                    <h3><i data-lucide="trending-up"></i> Phân tích xu hướng (Trends)</h3>
+                                    <div id="state-trends-content" class="state-data">Chưa có phân tích xu hướng.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Selected Papers -->
+                    <div id="tab-papers" class="tab-content">
+                        <div class="glass-inner-card">
+                            <div class="section-title">
+                                <h3>Các bài báo khoa học được chọn lọc</h3>
+                                <p>Các tài liệu này đã được tải về dưới dạng PDF và phân tích sâu bằng RAG.</p>
+                            </div>
+                            <div id="papers-list" class="papers-grid">
+                                <div class="empty-state">
+                                    <i data-lucide="files" class="large-empty-icon"></i>
+                                    <h3>Chưa có tài liệu</h3>
+                                    <p>Hệ thống chưa tìm kiếm hoặc chọn lọc tài liệu nào.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Logs Console -->
+                    <div id="tab-logs" class="tab-content">
+                        <div class="terminal-card">
+                            <div class="terminal-header">
+                                <div class="terminal-dots">
+                                    <span class="dot red"></span>
+                                    <span class="dot yellow"></span>
+                                    <span class="dot green"></span>
+                                </div>
+                                <span class="terminal-title">bash - research_logs.sh</span>
+                                <button class="clear-logs-btn" onclick="clearLogs()"><i data-lucide="trash-2"></i> Clear</button>
+                            </div>
+                            <div id="terminal-logs" class="terminal-body">
+                                <div class="log-line system-line">[SYSTEM] Khởi chạy terminal. Chờ tín hiệu từ AI Agent...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="/static/app.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
