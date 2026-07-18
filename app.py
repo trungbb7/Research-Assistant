@@ -91,7 +91,7 @@ def route_llm(state: AgentState):
         return "tools"
 
     if state["completed"]:
-        md_print(serialize_research_report(state["report"]))
+        # md_print(serialize_research_report(state["report"]))
         return END
 
     if state["enough_info"]:
@@ -160,94 +160,7 @@ def write_final_report_node(state: AgentState):
 def finalize_node(state: AgentState):
     final_report = state["final_report"]
     save_report(final_report)
-    md_print(final_report)
-
-
-def run_agent(query):
-    workflow = StateGraph(AgentState)
-
-    workflow.add_node("llm", llm_node)
-    workflow.add_node("tools", tools_node)
-    workflow.add_node("retrieve_chunks", retrieve_chunks_node)
-    workflow.add_node("extract_findings", extract_findings_node)
-    workflow.add_node("compare_papers", compare_papers_node)
-    workflow.add_node("trends_analysis", trends_analysis_node)
-    workflow.add_node("generate_report", generate_report_node)
-    workflow.add_node("write_final_report", write_final_report_node)
-    workflow.add_node("finalize", finalize_node)
-
-    workflow.add_edge(START, "llm")
-    workflow.add_conditional_edges("llm", route_llm)
-    workflow.add_edge("tools", "llm")
-    workflow.add_edge("retrieve_chunks", "extract_findings")
-    workflow.add_edge("extract_findings", "compare_papers")
-    workflow.add_edge("compare_papers", "trends_analysis")
-    workflow.add_edge("trends_analysis", "generate_report")
-    workflow.add_edge("generate_report", "write_final_report")
-    workflow.add_edge("write_final_report", "finalize")
-    workflow.add_edge("finalize", END)
-
-    app = workflow.compile()
-
-    inputs = {
-        "messages": [
-            SystemMessage(
-                content="""You are a research assistant. You help users research or answer normal queries.
-                 For most tasks, get the current date time first.
-                 
-                 CRITICAL INSTRUCTIONS FOR RESEARCH TASKS:
-                 If a task requires research, you must follow the strict step-by-step pipeline. Your primary goal is to gather and ingest the research papers, and then verify if we have enough information.
-                 
-                 WARNING: You MUST NOT write or generate the final report or summary yourself. The system has specialized downstream nodes that will automatically extract findings, compare papers, analyze trends, and compile the final report. Your role is solely to fetch, download, ingest, select, and check the information.
-                 
-                 Flow for Research Tasks:
-                 1. Call `generate_plan` to structure the research tasks.
-                 2. Search the internet using `search_website_url` to find the latest updates, models, and paper names.
-                 3. Use `arxiv_search` to find relevant scientific papers on arXiv.
-                 4. For each relevant paper you want to study, you MUST download its PDF file by calling `download_pdf(url)`.
-                    - DO NOT call `fetch_web_content` on PDF files, academic paper URLs, or arXiv PDFs. Only use `download_pdf`.
-                 5. For each successfully downloaded PDF file, you MUST ingest it into the database by calling `add_documents(pdf_path, metadata)`.
-                    - If pdf files exist, don't ingest them (they have been ingested before)
-                 6. After adding documents, you MUST call `select_papers()` to select the relevant papers and populate `selected_paper_ids` in the system state.
-                 7. Finally, call `check_info_for_research()` to check if the gathered paper summaries are enough to answer the research query.
-                 8. If `check_info_for_research` indicates that the information is NOT enough (enough=False), go back to search for more papers.
-                 9. If `check_info_for_research` indicates that the information IS enough (enough=True), you MUST IMMEDIATELY stop calling tools and respond with a simple text message like "I have gathered enough research papers and successfully ingested them. Starting the research extraction and analysis..." without writing the report yourself.
-                 """
-            ),
-            HumanMessage(content=query),
-        ],
-        "query": query,
-        "enough_info": False,
-        "completed": False,
-    }
-
-    for output in app.stream(inputs, stream_mode="updates"):
-        for node_name, updated_state in output.items():
-            print(f"Node: {node_name}")
-
-            if updated_state is None:
-                continue
-
-            if "messages" in updated_state and updated_state["messages"]:
-                last_msg = updated_state["messages"][-1]
-                if getattr(last_msg, "tool_calls", None):
-                    for tool_call in last_msg.tool_calls:
-                        args = ", ".join(
-                            [f"{k}={v}" for k, v in tool_call["args"].items()]
-                        )
-                        print(f"Tool call: {tool_call["name"]}, args: {args}")
-                        continue
-
-                content = last_msg.content
-                if isinstance(content, list) and content:
-                    md_print(content[0]["text"])
-                elif not (
-                    getattr(last_msg, "tool_calls", None)
-                    or getattr(last_msg, "tool_call_id", None)
-                ):
-                    md_print(content)
-                else:
-                    print(f"Log: {content[:200]}{'...' if len(content) > 200 else ''}")
+    # md_print(final_report)
 
 
 def run_agent_stream(query):
@@ -288,7 +201,7 @@ def run_agent_stream(query):
                  WARNING: You MUST NOT write or generate the final report or summary yourself. The system has specialized downstream nodes that will automatically extract findings, compare papers, analyze trends, and compile the final report. Your role is solely to fetch, download, ingest, select, and check the information.
                  
                  Flow for Research Tasks:
-                 1. Call `generate_plan` to structure the research tasks.
+                 1. Call `generate_plan` tool to structure the research tasks.
                  2. Search the internet using `search_website_url` to find the latest updates, models, and paper names.
                  3. Use `arxiv_search` to find relevant scientific papers on arXiv.
                  4. For each relevant paper you want to study, you MUST download its PDF file by calling `download_pdf(url)`.
@@ -327,13 +240,17 @@ def run_agent_stream(query):
                             "event": "tool_call",
                             "node": node_name,
                             "tool": tool_call["name"],
-                            "arguments": args
+                            "arguments": args,
                         }
 
                 content = last_msg.content
                 if content:
                     if isinstance(content, list) and content:
-                        text_val = content[0].get("text", "") if isinstance(content[0], dict) else str(content[0])
+                        text_val = (
+                            content[0].get("text", "")
+                            if isinstance(content[0], dict)
+                            else str(content[0])
+                        )
                         yield {"event": "log", "node": node_name, "content": text_val}
                     elif not (
                         getattr(last_msg, "tool_calls", None)
@@ -341,24 +258,32 @@ def run_agent_stream(query):
                     ):
                         yield {"event": "log", "node": node_name, "content": content}
                     else:
-                        yield {"event": "log", "node": node_name, "content": "Executing tool..."}
+                        yield {
+                            "event": "log",
+                            "node": node_name,
+                            "content": "Executing tool...",
+                        }
 
             # Capture other details from state updates
             if "plan" in updated_state and updated_state["plan"]:
+                print("da vao plan")
                 plan_val = updated_state["plan"]
                 yield {
                     "event": "state_update",
                     "node": node_name,
                     "key": "plan",
-                    "value": plan_val.dict() if hasattr(plan_val, "dict") else plan_val
+                    "value": plan_val.dict() if hasattr(plan_val, "dict") else plan_val,
                 }
 
-            if "selected_paper_ids" in updated_state and updated_state["selected_paper_ids"]:
+            if (
+                "selected_paper_ids" in updated_state
+                and updated_state["selected_paper_ids"]
+            ):
                 yield {
                     "event": "state_update",
                     "node": node_name,
                     "key": "selected_paper_ids",
-                    "value": updated_state["selected_paper_ids"]
+                    "value": updated_state["selected_paper_ids"],
                 }
 
             if "findings" in updated_state and updated_state["findings"]:
@@ -367,7 +292,9 @@ def run_agent_stream(query):
                     "event": "state_update",
                     "node": node_name,
                     "key": "findings",
-                    "value": [f.dict() if hasattr(f, "dict") else f for f in findings_val]
+                    "value": [
+                        f.dict() if hasattr(f, "dict") else f for f in findings_val
+                    ],
                 }
 
             if "comparison" in updated_state and updated_state["comparison"]:
@@ -376,7 +303,7 @@ def run_agent_stream(query):
                     "event": "state_update",
                     "node": node_name,
                     "key": "comparison",
-                    "value": comp_val.dict() if hasattr(comp_val, "dict") else comp_val
+                    "value": comp_val.dict() if hasattr(comp_val, "dict") else comp_val,
                 }
 
             if "trends" in updated_state and updated_state["trends"]:
@@ -385,18 +312,21 @@ def run_agent_stream(query):
                     "event": "state_update",
                     "node": node_name,
                     "key": "trends",
-                    "value": trends_val.dict() if hasattr(trends_val, "dict") else trends_val
+                    "value": (
+                        trends_val.dict() if hasattr(trends_val, "dict") else trends_val
+                    ),
                 }
 
             if "report" in updated_state and updated_state["report"]:
                 report_val = updated_state["report"]
                 from .utils.document_utils import serialize_research_report
+
                 serialized = serialize_research_report(report_val)
                 yield {
                     "event": "state_update",
                     "node": node_name,
                     "key": "report",
-                    "value": serialized
+                    "value": serialized,
                 }
 
             if "final_report" in updated_state and updated_state["final_report"]:
@@ -404,10 +334,9 @@ def run_agent_stream(query):
                     "event": "state_update",
                     "node": node_name,
                     "key": "final_report",
-                    "value": updated_state["final_report"]
+                    "value": updated_state["final_report"],
                 }
 
             yield {"event": "node_end", "node": node_name}
 
     yield {"event": "complete"}
-
