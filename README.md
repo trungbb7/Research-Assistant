@@ -25,12 +25,14 @@ A LangGraph-powered AI Research Assistant designed to automate the process of ac
 ## Installation & Setup
 
 ### 1. Clone the Repository
+
 ```bash
-git clone <repository-url>
+git clone https://github.com/trungbb7/Research-Assistant.git
 cd ai-agent
 ```
 
 ### 2. Set Up Virtual Environment & Dependencies
+
 ```bash
 python -m venv venv
 # On Windows
@@ -42,7 +44,9 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure Environment Variables
+
 Create a `.env` file in the root directory:
+
 ```ini
 DEEPSEEK_API_KEY=your_deepseek_api_key
 OPENAI_API_KEY=your_openai_api_key
@@ -58,6 +62,7 @@ QDRANT_PORT=6333
 ### Option A: Running Locally
 
 1. **Start Qdrant Vector DB** (via Docker):
+
    ```bash
    docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant
    ```
@@ -73,7 +78,9 @@ QDRANT_PORT=6333
 ### Option B: Running with Docker Compose
 
 To spin up both the Flask application and the Qdrant instance together:
+
 ```bash
 docker-compose up --build
 ```
+
 Access the application at `http://localhost:5000`.
