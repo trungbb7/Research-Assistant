@@ -1,6 +1,5 @@
 # from pydantic import Ano
 from ..config import basePath
-from ..models.document import ResearchReport
 from datetime import datetime
 import uuid
 

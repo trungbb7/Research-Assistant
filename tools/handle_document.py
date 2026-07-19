@@ -10,8 +10,6 @@ from qdrant_client import models
 from langgraph.prebuilt import InjectedState
 from ..models.document import DocumentMetaData, Document, PageDocument
 from ..vectordb.vectordb import (
-    paper_chunks_retriever,
-    paper_summaries_retriever,
     paper_chunks_vectorstore,
     paper_summaries_vectorstore,
 )

@@ -59,6 +59,7 @@ reasoning_llm = ChatOpenAI(
 @tool
 def generate_plan(
     query: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
 ):
     """Generate plan for query"""
     PROMPT = """
@@ -79,7 +80,17 @@ def generate_plan(
     )
     plan = structured_llm.invoke(PROMPT.format(query=query))
 
-    return plan.model_dump_json()
+    return Command(
+        update={
+            "plan": plan,
+            "messages": [
+                ToolMessage(
+                    content=f"Generated plan",
+                    tool_call_id=tool_call_id,
+                )
+            ],
+        }
+    )
 
 
 @tool

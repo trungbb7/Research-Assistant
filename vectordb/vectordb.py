@@ -1,9 +1,6 @@
-# import chromadb
-# from langchain_chroma import Chroma
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient
 
-# from ..embeddings.bgem3 import bgem3_embeddings
 from ..embeddings.embedding import dense_embeddings, spare_embeddings
 
 from qdrant_client.models import (
@@ -12,7 +9,6 @@ from qdrant_client.models import (
     SparseVectorParams,
 )
 
-# client = chromadb.PersistentClient("chroma_db")
 client = QdrantClient(url="http://localhost:6333")
 
 
@@ -53,11 +49,3 @@ paper_summaries_vectorstore = QdrantVectorStore(
 
 paper_chunks_retriever = paper_chunks_vectorstore.as_retriever()
 paper_summaries_retriever = paper_summaries_vectorstore.as_retriever()
-
-# research_memory_db = QdrantVectorStore(
-#     client=client,
-#     collection_name="research_memory",
-#     embedding=dense_embeddings,
-#     sparse_embedding=spare_embeddings,
-#     retrieval_mode=RetrievalMode.HYBRID
-# )
