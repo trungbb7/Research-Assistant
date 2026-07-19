@@ -1,13 +1,14 @@
 import os
 import sys
-import json
-import traceback
 from flask import Flask, render_template, request, Response, jsonify
 from flask_cors import CORS
-from .agent import event_stream
+from agent import event_stream
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Add parent directory to sys.path if running directly as a script
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+parent_dir = os.path.dirname(os.path.abspath(__file__))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 

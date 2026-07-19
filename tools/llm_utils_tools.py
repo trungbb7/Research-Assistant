@@ -9,7 +9,7 @@ from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
 
-from ..models.document import (
+from models.document import (
     ChunkSummary,
     PaperSummary,
     Finding,
@@ -382,8 +382,6 @@ def generate_report(
 
 
 def write_final_report(report: ResearchReport):
-    str_report = report.model_dump_json()
-
     PROMPT = """
     Generate final report from research report as markdown format
 

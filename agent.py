@@ -16,15 +16,13 @@ from langgraph.prebuilt import ToolNode
 from langgraph.graph import StateGraph, START, END
 from dotenv import load_dotenv
 
-from .utils.common_utils import md_print
-from .utils.document_utils import serialize_research_report
-from .tools.search_web_urls import search_website_url
-from .tools.fetch_web_content import fetch_web_content
-from .tools.get_current_datetime import get_current_datetime
-from .tools.arxiv_search import arxiv_search
-from .tools.download_pdf import download_pdf
-from .tools.save_report import save_report
-from .tools.llm_utils_tools import (
+from tools.search_web_urls import search_website_url
+from tools.fetch_web_content import fetch_web_content
+from tools.get_current_datetime import get_current_datetime
+from tools.arxiv_search import arxiv_search
+from tools.download_pdf import download_pdf
+from tools.save_report import save_report
+from tools.llm_utils_tools import (
     generate_plan,
     select_papers,
     check_info_for_research,
@@ -34,12 +32,13 @@ from .tools.llm_utils_tools import (
     generate_report,
     write_final_report,
 )
-from .tools.handle_document import (
+from tools.handle_document import (
     retrieve_specific_paper_chunks,
     add_documents,
     retrieve_paper_summaries,
 )
-from .models.state import AgentState
+from models.state import AgentState
+from utils.document_utils import serialize_research_report
 
 load_dotenv()
 
@@ -320,7 +319,6 @@ def run_agent_stream(query):
 
             if "report" in updated_state and updated_state["report"]:
                 report_val = updated_state["report"]
-                from .utils.document_utils import serialize_research_report
 
                 serialized = serialize_research_report(report_val)
                 yield {

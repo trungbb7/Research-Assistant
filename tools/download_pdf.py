@@ -1,6 +1,6 @@
 import requests
 from langchain_core.tools import tool
-from ..config import basePath
+from config import basePath
 
 
 @tool

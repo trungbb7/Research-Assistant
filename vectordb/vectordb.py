@@ -1,7 +1,9 @@
+import os
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient
+from dotenv import load_dotenv
 
-from ..embeddings.embedding import dense_embeddings, spare_embeddings
+from embeddings.embedding import dense_embeddings, spare_embeddings
 
 from qdrant_client.models import (
     Distance,
@@ -9,7 +11,12 @@ from qdrant_client.models import (
     SparseVectorParams,
 )
 
-client = QdrantClient(url="http://localhost:6333")
+load_dotenv()
+
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = os.getenv("QDRANT_PORT", 6333)
+
+client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
 
 def ensure_collection(name: str):

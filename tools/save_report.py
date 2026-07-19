@@ -1,5 +1,5 @@
 # from pydantic import Ano
-from ..config import basePath
+from config import basePath
 from datetime import datetime
 import uuid
 

@@ -1,5 +1,5 @@
 import arxiv
-from ..models.paper import Paper
+from models.paper import Paper
 from langchain_core.tools import tool
 
 arxiv_client = arxiv.Client()

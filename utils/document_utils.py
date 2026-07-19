@@ -1,4 +1,4 @@
-from ..models.document import PaperSummary, ResearchReport
+from models.document import PaperSummary, ResearchReport
 
 
 def serilize_paper_summary(paper_summary: PaperSummary):

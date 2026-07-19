@@ -19,3 +19,4 @@ fastembed
 sentence-transformers
 flask
 flask-cors
+gunicorn

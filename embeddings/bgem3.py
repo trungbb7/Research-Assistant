@@ -2,7 +2,7 @@ import sys
 import torch
 from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
-from ..config import basePath
+from config import basePath
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
