@@ -1,4 +1,15 @@
 services:
+  ai-agent:
+    build: .
+    container_name: ai_agent_flask_container
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    restart: always
+    volumes:
+      - agent_flask_data:/app
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
@@ -9,4 +20,8 @@ services:
       - "6334:6334"
 
     volumes:
-      - D:/Workspace/qdrant/research_assistant_storage:/qdrant/storage
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  agent_flask_data:
+  qdrant_data:
