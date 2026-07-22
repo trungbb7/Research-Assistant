@@ -2,6 +2,8 @@
 
 A LangGraph-powered AI Research Assistant designed to automate the process of academic research. It creates plans, queries academic databases, downloads/ingests PDFs, performs RAG (Retrieval-Augmented Generation) using a hybrid vector store, and generates comprehensive comparative reports.
 
+[Deploy](https://research-assistant-production-d395.up.railway.app)
+
 ---
 
 ## Features
